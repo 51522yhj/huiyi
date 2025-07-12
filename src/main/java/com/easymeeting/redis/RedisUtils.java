@@ -55,7 +55,10 @@ public class RedisUtils<T> {
         }
 
     }
-
+    public T get(String key)
+    {
+        return key == null? null: redisTemplate.opsForValue().get(key);
+    }
     /**
      * 普通缓存放入并设置时间
      * @param key

@@ -1,9 +1,20 @@
 package com.easymeeting.service.impl;
 
+import java.util.Date;
 import java.util.List;
 
 import javax.annotation.Resource;
 
+import com.easymeeting.config.AppConfig;
+import com.easymeeting.constants.Constants;
+import com.easymeeting.entity.dto.TokenUserInfoDto;
+import com.easymeeting.entity.enums.ResponseCodeEnum;
+import com.easymeeting.entity.enums.UserStatusEnum;
+import com.easymeeting.entity.vo.UserInfoVO;
+import com.easymeeting.exception.BusinessException;
+import com.easymeeting.redis.RedisComponent;
+import com.easymeeting.utils.CopyTools;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.easymeeting.entity.enums.PageSize;
@@ -24,6 +35,10 @@ public class UserInfoServiceImpl implements UserInfoService {
 
 	@Resource
 	private UserInfoMapper<UserInfo, UserInfoQuery> userInfoMapper;
+	@Resource
+	private AppConfig appConfig;
+    @Autowired
+    private RedisComponent redisComponent;
 
 	/**
 	 * 根据条件查询列表
@@ -125,6 +140,56 @@ public class UserInfoServiceImpl implements UserInfoService {
 	 */
 	@Override
 	public Integer deleteUserInfoByUserId(String userId) {
+		// 调用userInfoMapper的deleteByUserId方法，根据userId删除用户信息，并返回删除的行数
 		return this.userInfoMapper.deleteByUserId(userId);
+	}
+
+	@Override
+	public void register(String email, String nickName, String password) {
+		// 根据邮箱查询用户信息
+		UserInfo userInfo= this.userInfoMapper.selectByEmail(email);
+		if (userInfo != null) {
+			throw new RuntimeException("该邮箱已被注册");
+		}
+		// 注册用户
+		Date curDate = new Date();
+		String userId = StringTools.getRandomNumber(Constants.LENGTH_12);
+		UserInfo user = new UserInfo();
+		user.setUserId(userId);
+		user.setEmail(email);
+		user.setNickName(nickName);
+		user.setPassword(password);
+		user.setPassword(StringTools.encodeByMD5(password));
+		user.setCreateTime(curDate);
+		user.setLastLoginTime(curDate.getTime());
+		user.setLastOffTime(curDate.getTime());
+		user.setMeetingNo(StringTools.getMeetingNoOrMeetingId());
+		user.setStatus(UserStatusEnum.ENABLE.getStatus());
+		this.userInfoMapper.insert(user);
+
+	}
+
+	@Override
+	public UserInfoVO login(String email, String password) {
+		UserInfo userInfo = userInfoMapper.selectByEmail(email);
+		if (null == userInfo || !StringTools.encodeByMD5(password).equals(userInfo.getPassword())) {
+			throw new BusinessException(ResponseCodeEnum.CODE_501);
+		}
+		if (UserStatusEnum.DISABLE.getStatus().equals(userInfo.getStatus())) {
+			throw new BusinessException(ResponseCodeEnum.CODE_502);
+		}
+		if (userInfo.getLastLoginTime()!= null && userInfo.getLastLoginTime() > userInfo.getLastOffTime()) {
+			throw new BusinessException(ResponseCodeEnum.CODE_503);
+		}
+		TokenUserInfoDto tokenUserInfoDto = CopyTools.copy(userInfo, TokenUserInfoDto.class);
+		String token =  StringTools.encodeByMD5(tokenUserInfoDto.getUserId() + StringTools.getRandomNumber(Constants.LENGTH_20));
+		tokenUserInfoDto.setToken(token);
+		tokenUserInfoDto.setAdmin(appConfig.getAdminEmails().contains(email));
+		tokenUserInfoDto.setMyMeetingNo(userInfo.getMeetingNo());
+		redisComponent.saveTokenUserInfoDto(tokenUserInfoDto);
+		UserInfoVO userInfoVO = CopyTools.copy(userInfo, UserInfoVO.class);
+		userInfoVO.setToken(token);
+		userInfoVO.setAdmin(appConfig.getAdminEmails().contains(email));
+        return userInfoVO;
 	}
 }

@@ -1,5 +1,10 @@
 package com.easymeeting.utils;
+import com.easymeeting.constants.Constants;
 import com.easymeeting.exception.BusinessException;
+import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.lang3.RandomStringUtils;
+
+
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
@@ -49,5 +54,19 @@ public class StringTools {
             return true;
         }
         return false;
+    }
+
+    public static String getRandomNumber(int size) {
+        return RandomStringUtils.random(size, false, true);
+    }
+    public static String getRandomString(int size) {
+        return RandomStringUtils.random(size, true, true);
+    }
+
+    public static String encodeByMD5(String password) {
+        return StringTools.isEmpty(password) ? null : DigestUtils.md5Hex(password);
+    }
+    public static final String getMeetingNoOrMeetingId(){
+        return StringTools.getRandomNumber(Constants.LENGTH_10);
     }
 }

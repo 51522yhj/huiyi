@@ -5,6 +5,11 @@ import java.util.List;
 import com.easymeeting.entity.query.UserInfoQuery;
 import com.easymeeting.entity.po.UserInfo;
 import com.easymeeting.entity.vo.PaginationResultVO;
+import com.easymeeting.entity.vo.UserInfoVO;
+
+import javax.validation.constraints.Email;
+import javax.validation.constraints.NotEmpty;
+import javax.validation.constraints.Size;
 
 
 /**
@@ -69,4 +74,19 @@ public interface UserInfoService {
 	 */
 	Integer deleteUserInfoByUserId(String userId);
 
+	/**
+	 * 注册
+	 * @param email
+	 * @param nickName
+	 * @param password
+	 */
+    void register(String email, String nickName, String password);
+
+	/**
+	 * 登录
+	 * @param email
+	 * @param password
+	 * @return
+	 */
+	UserInfoVO login(@NotEmpty @Email String email, @NotEmpty @Size(max = 20) String password);
 }

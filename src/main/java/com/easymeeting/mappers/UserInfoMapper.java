@@ -25,4 +25,5 @@ public interface UserInfoMapper<T,P> extends BaseMapper<T,P> {
 	 T selectByUserId(@Param("userId") String userId);
 
 
+    T selectByEmail(@Param("email") String email);
 }
