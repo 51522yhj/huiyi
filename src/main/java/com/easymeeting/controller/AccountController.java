@@ -54,9 +54,9 @@ public class AccountController extends ABaseController{
 			if (result.hasErrors()) {
 				throw  new BusinessException("参数校验失败");
 			}
-//			if (!registerRequest.getCheckCode().equalsIgnoreCase(redisComponent.getCheckCode(registerRequest.getCheckCodeKey()))){
-//				throw  new BusinessException("图片验证码不正确");
-//			}
+			if (!registerRequest.getCheckCode().equalsIgnoreCase(redisComponent.getCheckCode(registerRequest.getCheckCodeKey()))){
+				throw  new BusinessException("图片验证码不正确");
+			}
 			this.userInfoService.register(registerRequest.getEmail(),registerRequest.getNickName(),registerRequest.getPassword());
 			return getSuccessResponseVO(null);
 		} finally {
@@ -70,9 +70,9 @@ public class AccountController extends ABaseController{
 			if( result.hasErrors()){
 				throw new BusinessException("参数校验失败");
 			}
-//			if (!loginRequest.getCheckCode().equalsIgnoreCase(redisComponent.getCheckCode(loginRequest.getCheckCodeKey()))){
-//				throw  new BusinessException("图片验证码不正确");
-//			}
+			if (!loginRequest.getCheckCode().equalsIgnoreCase(redisComponent.getCheckCode(loginRequest.getCheckCodeKey()))){
+				throw  new BusinessException("图片验证码不正确");
+			}
 			UserInfoVO userInfoVO = this.userInfoService.login(loginRequest.getEmail(),loginRequest.getPassword());
 			return getSuccessResponseVO(userInfoVO);
 		}finally {
