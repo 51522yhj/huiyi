@@ -2,6 +2,7 @@ package com.easymeeting.controller;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import com.easymeeting.annotation.GlobalInterceptor;
 import com.easymeeting.entity.dto.MeetingMemberDto;
@@ -12,11 +13,13 @@ import com.easymeeting.entity.enums.ResponseCodeEnum;
 import com.easymeeting.entity.po.MeetingMember;
 import com.easymeeting.entity.query.MeetingInfoQuery;
 import com.easymeeting.entity.po.MeetingInfo;
+import com.easymeeting.entity.query.MeetingMemberQuery;
 import com.easymeeting.entity.vo.PaginationResultVO;
 import com.easymeeting.entity.vo.ResponseVO;
 import com.easymeeting.exception.BusinessException;
 import com.easymeeting.redis.RedisComponent;
 import com.easymeeting.service.MeetingInfoService;
+import com.easymeeting.service.impl.MeetingMemberServiceImpl;
 import com.easymeeting.utils.StringTools;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -40,6 +43,8 @@ public class MeetingInfoController extends ABaseController{
 	private MeetingInfoService meetingInfoService;
     @Autowired
     private RedisComponent redisComponent;
+    @Autowired
+    private MeetingMemberServiceImpl meetingMemberService;
 
 	/**
 	 * 获取当前会议
@@ -92,12 +97,18 @@ public class MeetingInfoController extends ABaseController{
 		PaginationResultVO resultVO = meetingInfoService.findListByPage(infoQuery);
 		return getSuccessResponseVO(resultVO);
 	}
-	//
+
 	@RequestMapping("/loadMeetingMembers")
 	@GlobalInterceptor
 	public ResponseVO loadMeetingMembers(String meetingId){
-		//List<MeetingMember> meetingMembers = new ArrayList<>();
-		List<MeetingMemberDto> meetingMemberList = redisComponent.getMeetingMemberList(meetingId);
+		TokenUserInfoDto tokenUserInfo = getTokenUserInfo();
+		MeetingMemberQuery meetingMemberQuery = new MeetingMemberQuery();
+		meetingMemberQuery.setMeetingId(meetingId);
+		List<MeetingMember> meetingMemberList = meetingMemberService.findListByParam(meetingMemberQuery);
+		Optional<MeetingMember> first = meetingMemberList.stream().filter(item -> item.getUserId().equals(tokenUserInfo.getUserId())).findFirst();
+		if (!first.isPresent()){
+			throw  new BusinessException(ResponseCodeEnum.CODE_600);
+		}
 		return getSuccessResponseVO(meetingMemberList);
 	}
 	/**
@@ -163,6 +174,25 @@ public class MeetingInfoController extends ABaseController{
 		meetingInfoService.finishMeeting(tokenUserInfoDto.getCurrentMeetingId(),tokenUserInfoDto.getUserId());
 		return getSuccessResponseVO(null);
 	}
+
+	/**
+	 * 删除记录
+	 */
+	@RequestMapping("/delMeetingRecord")
+	@GlobalInterceptor
+	public ResponseVO delMeetingRecord(@NotNull String meetingId){
+		TokenUserInfoDto tokenUserInfoDto = getTokenUserInfo();
+		MeetingMember meetingMember = new MeetingMember();
+		meetingMember.setStatus(MeetingMemberStatusEnum.DEL_MEETING.getStatus());
+
+		MeetingMemberQuery meetingMemberQuery = new MeetingMemberQuery();
+		meetingMemberQuery.setMeetingId(meetingId);
+		meetingMemberQuery.setUserId(tokenUserInfoDto.getUserId());
+		meetingMemberService.updateByParam(meetingMember,meetingMemberQuery);
+		return getSuccessResponseVO(null);
+	}
+
+
 
 	/**
 	 * 根据条件分页查询
