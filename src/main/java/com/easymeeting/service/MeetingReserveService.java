@@ -2,6 +2,7 @@ package com.easymeeting.service;
 
 import java.util.List;
 
+import com.easymeeting.entity.dto.TokenUserInfoDto;
 import com.easymeeting.entity.query.MeetingReserveQuery;
 import com.easymeeting.entity.po.MeetingReserve;
 import com.easymeeting.entity.vo.PaginationResultVO;
@@ -76,4 +77,6 @@ public interface MeetingReserveService {
 	void deleteMeetingReserve(@NotNull String meetingId, String userId);
 
 	void deleteMeetingReserveByUser(@NotNull String meetingId, String userId);
+
+	void reserveJoinMeeting(@NotNull String meetingId, TokenUserInfoDto tokenUserInfo, String joinPassword);
 }

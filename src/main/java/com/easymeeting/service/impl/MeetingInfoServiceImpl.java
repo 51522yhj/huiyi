@@ -9,9 +9,11 @@ import javax.annotation.Resource;
 import com.easymeeting.entity.dto.*;
 import com.easymeeting.entity.enums.*;
 import com.easymeeting.entity.po.MeetingMember;
+import com.easymeeting.entity.po.MeetingReserve;
 import com.easymeeting.entity.query.MeetingMemberQuery;
 import com.easymeeting.exception.BusinessException;
 import com.easymeeting.mappers.MeetingMemberMapper;
+import com.easymeeting.mappers.MeetingReserveMapper;
 import com.easymeeting.redis.RedisComponent;
 import com.easymeeting.utils.JsonUtils;
 import com.easymeeting.websocket.ChannelContextUtils;
@@ -49,6 +51,8 @@ public class MeetingInfoServiceImpl implements MeetingInfoService {
 	private MeetingMemberMapper meetingMemberMapper;
     @Autowired
     private MessageHandler messageHandler;
+    @Autowired
+    private MeetingReserveMapper meetingReserveMapper;
 
 	/**
 	 * 根据条件查询列表
@@ -329,7 +333,11 @@ public class MeetingInfoServiceImpl implements MeetingInfoService {
 		meetingMemberQuery.setMeetingId(currentMeetingId);
 		meetingMemberMapper.updateByParam(meetingMember,meetingMemberQuery);
 
-		//TODO 更新预约会议状态
+		// 更新预约会议状态
+		MeetingReserve updateMeetingReserve = new MeetingReserve();
+		updateMeetingReserve.setStatus(MeetingReserveStatusEnum.FINISHED.getStatus());
+		updateMeetingReserve.setMeetingId(currentMeetingId);
+		meetingReserveMapper.updateByMeetingId(updateMeetingReserve,currentMeetingId);
 
 		List<MeetingMemberDto> meetingMemberDtoList = redisComponent.getMeetingMemberList(currentMeetingId);
 		for (MeetingMemberDto meetingMemberDto:meetingMemberDtoList){

@@ -6,16 +6,22 @@ import java.util.List;
 
 import javax.annotation.Resource;
 
-import com.easymeeting.entity.enums.MeetingReserveStatusEnum;
-import com.easymeeting.entity.enums.ResponseCodeEnum;
+import com.easymeeting.entity.dto.MeetingMemberDto;
+import com.easymeeting.entity.dto.TokenUserInfoDto;
+import com.easymeeting.entity.enums.*;
+import com.easymeeting.entity.po.MeetingInfo;
 import com.easymeeting.entity.po.MeetingMember;
 import com.easymeeting.entity.po.MeetingReserveMember;
+import com.easymeeting.entity.query.MeetingInfoQuery;
 import com.easymeeting.entity.query.MeetingReserveMemberQuery;
 import com.easymeeting.exception.BusinessException;
+import com.easymeeting.mappers.MeetingInfoMapper;
 import com.easymeeting.mappers.MeetingReserveMemberMapper;
+import com.easymeeting.redis.RedisComponent;
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.easymeeting.entity.enums.PageSize;
 import com.easymeeting.entity.query.MeetingReserveQuery;
 import com.easymeeting.entity.po.MeetingReserve;
 import com.easymeeting.entity.vo.PaginationResultVO;
@@ -35,6 +41,10 @@ public class MeetingReserveServiceImpl implements MeetingReserveService {
 	private MeetingReserveMapper<MeetingReserve, MeetingReserveQuery> meetingReserveMapper;
 	@Resource
 	private MeetingReserveMemberMapper<MeetingReserveMember, MeetingReserveMemberQuery> meetingReserveMemberMapper;
+	@Resource
+	private RedisComponent redisComponent;
+    @Resource
+    private MeetingInfoMapper<MeetingInfo, MeetingInfoQuery> meetingInfoMapper;
 
 	/**
 	 * 根据条件查询列表
@@ -193,6 +203,50 @@ public class MeetingReserveServiceImpl implements MeetingReserveService {
 			memberQuery.setMeetingId(meetingId);
 			memberQuery.setInviteUserId(userId);
 			meetingReserveMemberMapper.deleteByParam(memberQuery);
+		}
+	}
+
+	@Override
+	public void reserveJoinMeeting(String meetingId, TokenUserInfoDto tokenUserInfo, String joinPassword) {
+		String userId = tokenUserInfo.getUserId();
+		if (!StringTools.isEmpty(tokenUserInfo.getCurrentMeetingId()) && !meetingId.equals(tokenUserInfo.getCurrentMeetingId())){
+			throw  new BusinessException("您有未结束的会议");
+		}
+		checkMeetingJoin(meetingId,userId);
+		MeetingReserve meetingReserve = meetingReserveMapper.selectByMeetingId(meetingId);
+		if (meetingReserve == null){
+			throw  new BusinessException(ResponseCodeEnum.CODE_600);
+		}
+		MeetingReserveMember member = meetingReserveMemberMapper.selectByMeetingIdAndInviteUserId(meetingId,userId);
+		if (member == null){
+			throw  new BusinessException(ResponseCodeEnum.CODE_600);
+		}
+		if(MeetingJoinTypeEnum.PASSWORD.getType().equals(meetingReserve.getJoinType()) && !meetingReserve.getJoinPassword().equals(joinPassword)){
+			throw  new BusinessException("密码错误");
+		}
+		MeetingInfo meetingInfo = meetingInfoMapper.selectByMeetingId(meetingId);
+		if (meetingInfo == null){
+			meetingInfo = new MeetingInfo();
+			meetingInfo.setMeetingName(meetingReserve.getMeetingName());
+			meetingInfo.setMeetingNo(StringTools.getMeetingNoOrMeetingId());
+			meetingInfo.setJoinType(meetingReserve.getJoinType());
+			meetingInfo.setJoinPassword(meetingReserve.getJoinPassword());
+			Date curDate = new Date();
+			meetingInfo.setCreateTime(curDate);
+			meetingInfo.setMeetingId(meetingId);
+			meetingInfo.setStartTime(curDate);
+			meetingInfo.setStatus(MeetingStatusEnum.RUNNING.getStatus());
+			meetingInfo.setCreateUserId(meetingReserve.getCreateUserId());
+			meetingInfoMapper.insert(meetingInfo);
+		}
+		tokenUserInfo.setCurrentMeetingId(meetingId);
+		redisComponent.saveTokenUserInfoDto(tokenUserInfo);
+
+	}
+	private void checkMeetingJoin(String meetingId,String userId){
+		MeetingMemberDto meetingMemberDto = redisComponent.getMeetingMember(meetingId,userId);
+		if (meetingMemberDto != null && MeetingMemberStatusEnum.BLACKLIST.getStatus().equals(meetingMemberDto.getStatus())){
+			throw  new BusinessException("你已被拉黑，无法加入会议");
 		}
 	}
 }

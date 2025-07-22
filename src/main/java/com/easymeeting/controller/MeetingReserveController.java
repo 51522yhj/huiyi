@@ -87,6 +87,18 @@ public class MeetingReserveController extends ABaseController{
 		return getSuccessResponseVO(null);
 	}
 	/**
+	 * 加入预约会议
+	 */
+	@RequestMapping("/reserveJoinMeeting")
+	public ResponseVO reserveJoinMeeting(@NotNull String meetingId,@NotNull String nickName,String joinPassword){
+
+		TokenUserInfoDto tokenUserInfo = getTokenUserInfo();
+		tokenUserInfo.setCurrentNickName(nickName);
+		meetingReserveService.reserveJoinMeeting(meetingId,tokenUserInfo,joinPassword);
+		//meetingReserveService.deleteMeetingReserveByUser(meetingId,tokenUserInfo.getUserId());
+		return getSuccessResponseVO(null);
+	}
+	/**
 	 * 根据条件分页查询
 	 */
 	@RequestMapping("/loadDataList")
