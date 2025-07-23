@@ -296,7 +296,15 @@ public class MeetingInfoServiceImpl implements MeetingInfoService {
 		List<MeetingMemberDto> onLineMemberList = meetingMemberList.stream().filter(meetingMemberDto -> MeetingMemberStatusEnum.NORMAL.getStatus().equals(meetingMemberDto.getStatus())).collect(Collectors.toList());
 		if(onLineMemberList.size() == 0) {
 			// 结束会议
+			MeetingReserve meetingReserve = (MeetingReserve) meetingReserveMapper.selectByMeetingId(meetingId);
+			if (meetingReserve == null){
+				finishMeeting(meetingId,null);
 			return;
+			}
+			if (System.currentTimeMillis()>meetingReserve.getStartTime().getTime() + meetingReserve.getDuration()*60*1000){
+				finishMeeting(meetingId,null);
+			return;
+			}
 		}
 
 		if (ArrayUtils.contains(new Integer[]{MeetingMemberStatusEnum.KICK_OUT.getStatus(),MeetingMemberStatusEnum.BLACKLIST.getStatus()},meetingMemberStatusEnum.getStatus())){
