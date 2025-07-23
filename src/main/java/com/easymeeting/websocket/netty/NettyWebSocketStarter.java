@@ -56,7 +56,6 @@ public class NettyWebSocketStarter implements Runnable{
                             pipeline.addLast(new HttpServerCodec());
                             /**
                              * http消息聚合器，主要是将分片的消息聚合成完整的FullHttpRequest FullHttpResponse
-                             *
                              */
                             pipeline.addLast(new HttpObjectAggregator(6*1024));
                             /**

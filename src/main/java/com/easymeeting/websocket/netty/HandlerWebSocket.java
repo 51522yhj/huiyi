@@ -38,6 +38,10 @@ public class HandlerWebSocket extends SimpleChannelInboundHandler<TextWebSocketF
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
        log.info("有新的连接加入.........");
+        Attribute<String> attribute = ctx.channel().attr(AttributeKey.valueOf(ctx.channel().id().toString()));
+        String userId = attribute.get();
+        UserInfo userInfo = new UserInfo();
+        userInfo.setLastLoginTime(System.currentTimeMillis());
     }
 
     @Override
@@ -46,7 +50,7 @@ public class HandlerWebSocket extends SimpleChannelInboundHandler<TextWebSocketF
         Attribute<String> attribute = ctx.channel().attr(AttributeKey.valueOf(ctx.channel().id().toString()));
         String userId = attribute.get();
         UserInfo userInfo = new UserInfo();
-        userInfo.setLastLoginTime(System.currentTimeMillis());
+        userInfo.setLastOffTime(System.currentTimeMillis());
         userInfoMapper.updateByUserId(userInfo,userId);
     }
 
