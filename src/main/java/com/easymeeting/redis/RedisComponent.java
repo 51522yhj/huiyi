@@ -4,6 +4,7 @@ import com.easymeeting.constants.Constants;
 import com.easymeeting.entity.dto.MeetingMemberDto;
 import com.easymeeting.entity.dto.TokenUserInfoDto;
 import com.easymeeting.entity.enums.MeetingMemberStatusEnum;
+import com.easymeeting.utils.JsonUtils;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
@@ -39,7 +40,8 @@ public class RedisComponent {
         return (TokenUserInfoDto) redisUtils.get(Constants.REDIS_KEY_WS_TOKEN + token);
     }
     public TokenUserInfoDto getTokenUserInfoDtoByUserId(String userId) {
-        return (TokenUserInfoDto) redisUtils.get(Constants.REDIS_KEY_WS_TOEKN_USERID + userId);
+        return JsonUtils.convertJson2Obj((String) redisUtils.get(Constants.REDIS_KEY_WS_TOEKN_USERID + userId), TokenUserInfoDto.class);
+       // return (TokenUserInfoDto) redisUtils.get(Constants.REDIS_KEY_WS_TOEKN_USERID + userId);
     }
 
     public TokenUserInfoDto getTokenUserInfoDto(String token) {
@@ -74,5 +76,11 @@ public class RedisComponent {
             return;
         }
         redisUtils.hdel(Constants.REDIS_KEY_MEETING_ROOM+currentMeetingId,userIdList.toArray(new String[userIdList.size()]));
+    }
+    public void addInviteInfo(String meetingId, String userId) {
+        redisUtils.setex(Constants.REDIS_KEY_INVITE_MEMBER +userId + meetingId,meetingId,Constants.REDIS_KEY_EXPIRES_ONE_MIN*5);
+    }
+    public String  getInviteInfo(String userId, String meetingId) {
+      return (String) redisUtils.get(Constants.REDIS_KEY_INVITE_MEMBER +userId + meetingId);
     }
 }

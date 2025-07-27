@@ -1,5 +1,6 @@
 package com.easymeeting.entity.po;
 
+import com.easymeeting.constants.Constants;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.util.Date;
 import com.easymeeting.entity.enums.DateTimePatternEnum;
@@ -38,6 +39,41 @@ public class UserContact implements Serializable {
 	@DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
 	private Date lastUpdateTime;
 
+	private String nickName;
+	private Long lastLoginTime;
+	private Long lastOffTime;
+	private Integer onlineType;
+	public Integer getOnlineType() {
+		if (lastLoginTime!= null&& lastLoginTime > lastOffTime){
+			return Constants.ONE;
+		}else {
+			return Constants.ZERO;
+		}
+	}
+
+	public String getNickName() {
+		return nickName;
+	}
+
+	public void setNickName(String nickName) {
+		this.nickName = nickName;
+	}
+
+	public Long getLastLoginTime() {
+		return lastLoginTime;
+	}
+
+	public void setLastLoginTime(Long lastLoginTime) {
+		this.lastLoginTime = lastLoginTime;
+	}
+
+	public Long getLastOffTime() {
+		return lastOffTime;
+	}
+
+	public void setLastOffTime(Long lastOffTime) {
+		this.lastOffTime = lastOffTime;
+	}
 
 	public void setUserId(String userId){
 		this.userId = userId;

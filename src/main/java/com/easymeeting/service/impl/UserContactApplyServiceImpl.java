@@ -1,12 +1,19 @@
 package com.easymeeting.service.impl;
 
+import java.util.Date;
 import java.util.List;
 
 import javax.annotation.Resource;
 
+import com.easymeeting.entity.dto.MessageSendDto;
+import com.easymeeting.entity.enums.*;
+import com.easymeeting.entity.po.UserContact;
+import com.easymeeting.exception.BusinessException;
+import com.easymeeting.mappers.UserContactMapper;
+import com.easymeeting.websocket.message.MessageHandler;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.easymeeting.entity.enums.PageSize;
 import com.easymeeting.entity.query.UserContactApplyQuery;
 import com.easymeeting.entity.po.UserContactApply;
 import com.easymeeting.entity.vo.PaginationResultVO;
@@ -24,6 +31,10 @@ public class UserContactApplyServiceImpl implements UserContactApplyService {
 
 	@Resource
 	private UserContactApplyMapper<UserContactApply, UserContactApplyQuery> userContactApplyMapper;
+    @Autowired
+    private UserContactMapper userContactMapper;
+	@Resource
+	private MessageHandler messageHandler;
 
 	/**
 	 * 根据条件查询列表
@@ -150,5 +161,36 @@ public class UserContactApplyServiceImpl implements UserContactApplyService {
 	@Override
 	public Integer deleteUserContactApplyByApplyUserIdAndReceiveUserId(String applyUserId, String receiveUserId) {
 		return this.userContactApplyMapper.deleteByApplyUserIdAndReceiveUserId(applyUserId, receiveUserId);
+	}
+
+	@Override
+	public void dealWithApply(String applyId, String userId, String nickName, Integer status) {
+		UserContactApplyStatusEnum statusEnum = UserContactApplyStatusEnum.getByStatus(status);
+		if (statusEnum == null || UserContactApplyStatusEnum.INIT == statusEnum){
+			throw  new BusinessException(ResponseCodeEnum.CODE_600);
+		}
+		UserContactApply apply = userContactApplyMapper.selectByApplyUserIdAndReceiveUserId(applyId, userId);
+		if (apply == null){
+			throw  new BusinessException(ResponseCodeEnum.CODE_600);
+		}
+		if(UserContactApplyStatusEnum.PASS.getStatus().equals(status)){
+			Date now = new Date();
+			UserContact userContact = new UserContact();
+			userContact.setUserId(applyId);
+			userContact.setContactId(userId);
+			userContact.setStatus(UserContactStatusEnum.FRIEND.getStatus());
+			userContact.setLastUpdateTime(now);
+			userContactMapper.insertOrUpdate(userContact);
+		}
+		UserContactApply updateApply = new UserContactApply();
+		updateApply.setStatus(status);
+		userContactApplyMapper.updateByApplyId(updateApply,apply.getApplyId());
+		MessageSendDto sendDto = new MessageSendDto();
+		sendDto.setReceiveUserId(applyId);
+		sendDto.setMessageSend2Type(MessageSend2TypeEnum.USER.getType());
+		sendDto.setUserNickName(nickName);
+		sendDto.setMessageContent(status);
+		sendDto.setMessageType(MessageTypeEnum.USER_CONTACT_DEAL_WITH.getType());
+		messageHandler.sendMessage(sendDto);
 	}
 }

@@ -9,6 +9,7 @@ import java.io.Serializable;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class MessageSendDto<T> implements Serializable {
     private static final long serialVersionUID = -1045752033171142417L;
+    private String userNickName;
     private Integer messageType;
    private String meetingId;
     private Integer messageSend2Type;

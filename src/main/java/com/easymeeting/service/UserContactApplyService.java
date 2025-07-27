@@ -6,6 +6,8 @@ import com.easymeeting.entity.query.UserContactApplyQuery;
 import com.easymeeting.entity.po.UserContactApply;
 import com.easymeeting.entity.vo.PaginationResultVO;
 
+import javax.validation.constraints.NotNull;
+
 
 /**
  *  业务接口
@@ -87,4 +89,5 @@ public interface UserContactApplyService {
 	 */
 	Integer deleteUserContactApplyByApplyUserIdAndReceiveUserId(String applyUserId,String receiveUserId);
 
+    void dealWithApply(@NotNull String applyId, String userId, String nickName, @NotNull Integer status);
 }

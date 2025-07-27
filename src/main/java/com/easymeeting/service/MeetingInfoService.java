@@ -8,6 +8,7 @@ import com.easymeeting.entity.query.MeetingInfoQuery;
 import com.easymeeting.entity.po.MeetingInfo;
 import com.easymeeting.entity.vo.PaginationResultVO;
 
+import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
 
 
@@ -85,4 +86,10 @@ public interface MeetingInfoService {
     void forceExitMeeting(TokenUserInfoDto tokenUserInfoDto,String userId, MeetingMemberStatusEnum meetingMemberStatusEnum);
 
 	void finishMeeting(String currentMeetingId, String userId);
+
+    void inviteMember(TokenUserInfoDto tokenUserInfoDto, @NotEmpty String selectContactIds);
+
+	void acceptInvite(TokenUserInfoDto tokenUserInfoDto, @NotEmpty String meetingId);
+
+	void updateMemberOpenVideo(String currentMeetingId, String userId, @NotNull Boolean videoOpen);
 }

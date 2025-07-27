@@ -135,6 +135,26 @@ public class MeetingInfoController extends ABaseController{
 		return getSuccessResponseVO(meetingId);
 	}
 	/**
+	 * 邀请成员
+	 */
+	@RequestMapping("/inviteMember")
+	@GlobalInterceptor
+	public ResponseVO inviteMember(@NotEmpty String selectContactIds){
+		TokenUserInfoDto tokenUserInfoDto = getTokenUserInfo();
+		meetingInfoService.inviteMember(tokenUserInfoDto,selectContactIds);
+		return getSuccessResponseVO(null);
+	}
+	/**
+	 * 邀请成员
+	 */
+	@RequestMapping("/acceptInvite")
+	@GlobalInterceptor
+	public ResponseVO acceptInvite(@NotEmpty String meetingId){
+		TokenUserInfoDto tokenUserInfoDto = getTokenUserInfo();
+		meetingInfoService.acceptInvite(tokenUserInfoDto,meetingId);
+		return getSuccessResponseVO(null);
+	}
+	/**
 	 * 根据条件分页查询
 	 */
 	@RequestMapping("/exitMeeting")
@@ -192,6 +212,16 @@ public class MeetingInfoController extends ABaseController{
 		return getSuccessResponseVO(null);
 	}
 
+	/**
+	 * 根据条件分页查询
+	 */
+	@RequestMapping("/sendOpenVideoChangeMessage")
+	@GlobalInterceptor
+	public ResponseVO sendOpenVideoChangeMessage(@NotNull Boolean videoOpen){
+        TokenUserInfoDto tokenUserInfoDto = getTokenUserInfo();
+		meetingInfoService.updateMemberOpenVideo(tokenUserInfoDto.getCurrentMeetingId(),tokenUserInfoDto.getUserId(),videoOpen);
+		return getSuccessResponseVO(null);
+	}
 
 
 	/**

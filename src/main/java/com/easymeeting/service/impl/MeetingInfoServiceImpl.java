@@ -1,5 +1,6 @@
 package com.easymeeting.service.impl;
 
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -10,10 +11,13 @@ import com.easymeeting.entity.dto.*;
 import com.easymeeting.entity.enums.*;
 import com.easymeeting.entity.po.MeetingMember;
 import com.easymeeting.entity.po.MeetingReserve;
+import com.easymeeting.entity.po.UserContact;
 import com.easymeeting.entity.query.MeetingMemberQuery;
+import com.easymeeting.entity.query.UserContactQuery;
 import com.easymeeting.exception.BusinessException;
 import com.easymeeting.mappers.MeetingMemberMapper;
 import com.easymeeting.mappers.MeetingReserveMapper;
+import com.easymeeting.mappers.UserContactMapper;
 import com.easymeeting.redis.RedisComponent;
 import com.easymeeting.utils.JsonUtils;
 import com.easymeeting.websocket.ChannelContextUtils;
@@ -53,6 +57,8 @@ public class MeetingInfoServiceImpl implements MeetingInfoService {
     private MessageHandler messageHandler;
     @Autowired
     private MeetingReserveMapper meetingReserveMapper;
+    @Autowired
+    private UserContactMapper userContactMapper;
 
 	/**
 	 * 根据条件查询列表
@@ -355,5 +361,66 @@ public class MeetingInfoServiceImpl implements MeetingInfoService {
 		}
 		redisComponent.removeAllMeetingMember(currentMeetingId);
 
+	}
+
+	@Override
+	public void inviteMember(TokenUserInfoDto tokenUserInfoDto, String selectContactIds) {
+		String[]  contactIds = selectContactIds.split(",");
+		UserContactQuery contactQuery = new UserContactQuery();
+		contactQuery.setUserId(tokenUserInfoDto.getUserId());
+		contactQuery.setStatus(UserContactStatusEnum.FRIEND.getStatus());
+		List<UserContact> userContacts = userContactMapper.selectList(contactQuery);
+		List<String> contactIdList = userContacts.stream().map(item -> item.getContactId()).collect(Collectors.toList());
+		if (!contactIdList.containsAll(Arrays.asList(contactIds))){
+			throw  new BusinessException(ResponseCodeEnum.CODE_600);
+		}
+		MeetingInfo meetingInfo = meetingInfoMapper.selectByMeetingId(tokenUserInfoDto.getCurrentMeetingId());
+
+		for (String contactId:contactIds){
+			MeetingMemberDto meetingMemberDto = redisComponent.getMeetingMember(tokenUserInfoDto.getCurrentMeetingId(),contactId);
+			if (meetingMemberDto != null && MeetingMemberStatusEnum.NORMAL.getStatus().equals(meetingMemberDto.getStatus())){
+				continue;
+			}
+			redisComponent.addInviteInfo(tokenUserInfoDto.getCurrentMeetingId(),contactId);
+
+			MessageSendDto messageSendDto = new MessageSendDto<>();
+			messageSendDto.setMessageType(MessageTypeEnum.INVITE_MEMBER_MEETING.getType());
+			messageSendDto.setMessageSend2Type(MessageSend2TypeEnum.USER.getType());
+			messageSendDto.setReceiveUserId(contactId);
+
+			MeetingInviteDto meetingInviteDto = new MeetingInviteDto();
+			meetingInviteDto.setMeetingName(meetingInfo.getMeetingName());
+			meetingInviteDto.setInviteUserName(tokenUserInfoDto.getNickName());
+			meetingInviteDto.setMeetingId(tokenUserInfoDto.getCurrentMeetingId());
+			messageSendDto.setMessageContent(JsonUtils.convertObj2Json(meetingInviteDto));
+			messageHandler.sendMessage(messageSendDto);
+
+		}
+	}
+
+	@Override
+	public void acceptInvite(TokenUserInfoDto tokenUserInfoDto, String meetingId) {
+		String redisMeetingId = redisComponent.getInviteInfo(tokenUserInfoDto.getUserId(), meetingId);
+		if (null == redisMeetingId){
+			throw new BusinessException("邀请信息已过期");
+		}
+		tokenUserInfoDto.setCurrentMeetingId(meetingId);
+		tokenUserInfoDto.setCurrentNickName(tokenUserInfoDto.getNickName());
+		redisComponent.saveTokenUserInfoDto(tokenUserInfoDto);
+	}
+
+	@Override
+	public void updateMemberOpenVideo(String meetingId, String userId, Boolean openVideo) {
+		MeetingMemberDto meetingMemberDto = redisComponent.getMeetingMember(meetingId,userId);
+		meetingMemberDto.setOpenVideo(openVideo);
+		redisComponent.add2Meeting(meetingId,meetingMemberDto);
+
+		MessageSendDto messageSendDto = new MessageSendDto();
+		messageSendDto.setMessageType(MessageTypeEnum.MEETING_USER_VIDEO_CHANGE.getType());
+		messageSendDto.setMessageContent(openVideo);
+		messageSendDto.setSendUserId(userId);
+		messageSendDto.setMessageSend2Type(MessageSend2TypeEnum.GROUP.getType());
+		messageSendDto.setMeetingId(meetingId);
+		messageHandler.sendMessage(messageSendDto);
 	}
 }

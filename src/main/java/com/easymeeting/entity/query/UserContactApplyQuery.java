@@ -37,6 +37,17 @@ public class UserContactApplyQuery extends BaseParam {
 	 */
 	private Integer status;
 
+	public Boolean getQueryUserInfo() {
+		return queryUserInfo;
+	}
+
+	public void setQueryUserInfo(Boolean queryUserInfo) {
+		this.queryUserInfo = queryUserInfo;
+	}
+
+	private Boolean queryUserInfo;
+
+
 
 	public void setApplyId(Integer applyId){
 		this.applyId = applyId;

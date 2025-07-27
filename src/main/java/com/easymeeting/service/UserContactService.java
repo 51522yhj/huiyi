@@ -76,4 +76,6 @@ public interface UserContactService {
 	UserInfoVO4Search searchContact(String userId, @NotNull String userId1);
 
 	Integer contactApply(UserContactApply userContactApply);
+
+	void delContact(String userId, @NotNull String contactId, @NotNull Integer status);
 }

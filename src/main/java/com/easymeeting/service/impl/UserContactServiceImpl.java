@@ -1,23 +1,26 @@
 package com.easymeeting.service.impl;
 
+import java.util.Date;
 import java.util.List;
 
 import javax.annotation.Resource;
 
-import com.easymeeting.entity.enums.UserContactApplyStatusEnum;
-import com.easymeeting.entity.enums.UserContactStatusEnum;
+import com.easymeeting.entity.dto.MessageSendDto;
+import com.easymeeting.entity.enums.*;
 import com.easymeeting.entity.po.UserContactApply;
 import com.easymeeting.entity.po.UserInfo;
 import com.easymeeting.entity.query.UserContactApplyQuery;
 import com.easymeeting.entity.query.UserInfoQuery;
 import com.easymeeting.entity.vo.UserInfoVO4Search;
+import com.easymeeting.exception.BusinessException;
 import com.easymeeting.mappers.UserContactApplyMapper;
 import com.easymeeting.mappers.UserInfoMapper;
 import com.easymeeting.service.UserContactApplyService;
+import com.easymeeting.websocket.message.MessageHandler;
+import org.apache.commons.lang3.ArrayUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.easymeeting.entity.enums.PageSize;
 import com.easymeeting.entity.query.UserContactQuery;
 import com.easymeeting.entity.po.UserContact;
 import com.easymeeting.entity.vo.PaginationResultVO;
@@ -39,6 +42,8 @@ public class UserContactServiceImpl implements UserContactService {
     private UserInfoMapper<UserInfo, UserInfoQuery> userInfoMapper;
 	@Resource
 	private UserContactApplyMapper<UserContactApply, UserContactApplyQuery> userContactApplyMapper;
+	@Resource
+	private MessageHandler messageHandler;
 
 	/**
 	 * 根据条件查询列表
@@ -145,6 +150,7 @@ public class UserContactServiceImpl implements UserContactService {
 
 	@Override
 	public UserInfoVO4Search searchContact(String myId, String userId) {
+		System.out.println("userInfoMapper is null? " + (userInfoMapper == null));
 		UserInfo userInfo = userInfoMapper.selectByUserId(userId);
 		if (userInfo == null){
 			return null;
@@ -178,8 +184,51 @@ public class UserContactServiceImpl implements UserContactService {
 		return result;
 	}
 
+	/**
+	 * 发起申请好友
+	 * @param bean
+	 * @return
+	 */
 	@Override
-	public Integer contactApply(UserContactApply userContactApply) {
-		return 0;
+	public Integer contactApply(UserContactApply bean) {
+		UserContact userContact = userContactMapper.selectByUserIdAndContactId(bean.getReceiveUserId(), bean.getApplyUserId());
+		if ( (userContact != null)&&UserContactStatusEnum.BLACKLIST.getStatus().equals(userContact.getStatus()) ){
+			throw  new BusinessException("对方已将你拉黑");
+		}
+		if ((userContact != null) && UserContactStatusEnum.FRIEND.getStatus().equals(userContact.getStatus())){
+			UserContact updateInfo = new UserContact();
+			updateInfo.setLastUpdateTime(new Date());
+			updateInfo.setStatus(UserContactStatusEnum.FRIEND.getStatus());
+			userContactMapper.updateByUserIdAndContactId(updateInfo,bean.getApplyUserId(),bean.getReceiveUserId());
+			return UserContactStatusEnum.FRIEND.getStatus();
+		}
+		UserContactApply apply = userContactApplyMapper.selectByApplyUserIdAndReceiveUserId(bean.getApplyUserId(),bean.getReceiveUserId());
+		if (apply == null){
+			bean.setLastApplyTime(System.currentTimeMillis());
+			bean.setStatus(UserContactApplyStatusEnum.INIT.getStatus());
+			return userContactApplyMapper.insert(bean);
+		}else {
+			UserContactApply updateInfo = new UserContactApply();
+			updateInfo.setStatus(UserContactApplyStatusEnum.INIT.getStatus());
+			updateInfo.setLastApplyTime(System.currentTimeMillis());
+			userContactApplyMapper.updateByApplyId(updateInfo,apply.getApplyId());
+		}
+		MessageSendDto messageSendDto = new MessageSendDto<>();
+		messageSendDto.setMessageSend2Type(MessageSend2TypeEnum.USER.getType());
+		messageSendDto.setMessageType(MessageTypeEnum.USER_CONTACT_APPLY.getType());
+		messageSendDto.setReceiveUserId(bean.getReceiveUserId());
+		messageHandler.sendMessage(messageSendDto);
+		return UserContactApplyStatusEnum.INIT.getStatus();
+	}
+
+	@Override
+	public void delContact(String userId, String contactId, Integer status) {
+		if (!ArrayUtils.contains(new Integer[]{UserContactStatusEnum.DEL.getStatus(),UserContactStatusEnum.BLACKLIST.getStatus()},status)){
+			throw new BusinessException(ResponseCodeEnum.CODE_600);
+		}
+		UserContact userContact= new UserContact();
+		userContact.setLastUpdateTime(new Date());
+		userContact.setStatus(status);
+		userContactMapper.updateByUserIdAndContactId(userContact,userId,contactId);
 	}
 }

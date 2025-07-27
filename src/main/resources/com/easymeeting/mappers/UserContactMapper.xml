@@ -57,7 +57,12 @@
 
 	<!-- 查询集合-->
 	<select id="selectList" resultMap="base_result_map" >
-		 SELECT <include refid="base_column_list" /> FROM user_contact u <include refid="query_condition" />
+		 SELECT
+		 <include refid="base_column_list" />
+		     <if test="query.queryUserInfo">
+		       ,ui.nick_name nickName ,ui.last_login_time lastLoginTime ,ui.last_off_time lastOffTime
+			 </if>
+		     FROM user_contact u <include refid="query_condition" />
 		 <if test="query.orderBy!=null">
 			 order by ${query.orderBy}
 		 </if>
