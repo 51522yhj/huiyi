@@ -76,4 +76,8 @@ public class StringTools {
         }
         return fileName.substring(fileName.lastIndexOf(".") + 1);
     }
+
+    public static String getImageThumbnail(String filePath) {
+        return filePath + Constants.IMAGE_THUMBNAIL_SUFFIX;
+    }
 }
