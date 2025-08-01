@@ -1,19 +1,31 @@
 package com.easymeeting.service.impl;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.Date;
 import java.util.List;
 
 import javax.annotation.Resource;
 
+import com.easymeeting.config.AppConfig;
+import com.easymeeting.constants.Constants;
+import com.easymeeting.entity.dto.MessageSendDto;
+import com.easymeeting.entity.enums.*;
+import com.easymeeting.exception.BusinessException;
+import com.easymeeting.utils.*;
+import com.easymeeting.websocket.message.MessageHandler;
+import org.apache.commons.lang3.ArrayUtils;
+import org.hibernate.validator.internal.engine.messageinterpolation.parser.MessageState;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.easymeeting.entity.enums.PageSize;
 import com.easymeeting.entity.query.MeetingChatMessageQuery;
 import com.easymeeting.entity.po.MeetingChatMessage;
 import com.easymeeting.entity.vo.PaginationResultVO;
 import com.easymeeting.entity.query.SimplePage;
 import com.easymeeting.mappers.MeetingChatMessageMapper;
 import com.easymeeting.service.MeetingChatMessageService;
-import com.easymeeting.utils.StringTools;
+import org.springframework.web.multipart.MultipartFile;
 
 
 /**
@@ -24,6 +36,10 @@ public class MeetingChatMessageServiceImpl implements MeetingChatMessageService 
 
 	@Resource
 	private MeetingChatMessageMapper<MeetingChatMessage, MeetingChatMessageQuery> meetingChatMessageMapper;
+	@Resource
+	private MessageHandler messageHandler;
+    @Autowired
+    private AppConfig appConfig;
 
 	/**
 	 * 根据条件查询列表
@@ -126,5 +142,84 @@ public class MeetingChatMessageServiceImpl implements MeetingChatMessageService 
 	@Override
 	public Integer deleteMeetingChatMessageByMessageId(String tableName,Long messageId) {
 		return this.meetingChatMessageMapper.deleteByMessageId(tableName,messageId);
+	}
+
+	@Override
+	public void saveChatMessage(MeetingChatMessage chatMessage) {
+		ReceiveTypeEnum receiveTypeEnum = ReceiveTypeEnum.getByType(chatMessage.getReceiveType());
+		if (receiveTypeEnum == null){
+			throw new BusinessException(ResponseCodeEnum.CODE_600);
+		}
+		MessageTypeEnum messageTypeEnum = MessageTypeEnum.getByType(chatMessage.getMessageType());
+		if(messageTypeEnum == MessageTypeEnum.CHAT_MEDIA_MESSAGE){
+			if (StringTools.isEmpty(chatMessage.getMessageContent())){
+				throw new BusinessException(ResponseCodeEnum.CODE_600);
+			}
+			chatMessage.setStatus(MessageStatusEnum.SENDED.getStatus());
+		}else if(messageTypeEnum == MessageTypeEnum.CHAT_MEDIA_MESSAGE){
+			if (StringTools.isEmpty(chatMessage.getFileName()) || chatMessage.getFileSize() == null
+			|| chatMessage.getFileType() == null){
+				throw new BusinessException(ResponseCodeEnum.CODE_600);
+			}
+			chatMessage.setStatus(MessageStatusEnum.SENDING.getStatus());
+			chatMessage.setFileSuffix(StringTools.getFileSuffix(chatMessage.getFileName()));
+		}
+		chatMessage.setSendTime(System.currentTimeMillis());
+		chatMessage.setMessageId(SnowFlakeUtils.nextId());
+		String tableName = TableSplitUtils.getMeetingChatMessageTable(chatMessage.getMeetingId());
+		meetingChatMessageMapper.insert(tableName,chatMessage);
+		MessageSendDto messageSendDto = CopyTools.copy(chatMessage,MessageSendDto.class);
+		if (ReceiveTypeEnum.USER == receiveTypeEnum){
+			messageSendDto.setMessageSend2Type(MessageSend2TypeEnum.USER.getType());
+			messageHandler.sendMessage(messageSendDto);
+			// 发给自己
+			messageSendDto.setReceiveUserId(chatMessage.getSendUserId());
+			messageHandler.sendMessage(messageSendDto);
+		}
+		else{
+			messageSendDto.setMessageSend2Type(MessageSend2TypeEnum.GROUP.getType());
+            messageHandler.sendMessage(messageSendDto);
+		}
+	}
+
+	@Override
+	public void uploadFile(MultipartFile file, String currentMeetingId, Long messageId, Long sendTime) throws IOException {
+		String month = DateUtil.format(new Date(sendTime),DateTimePatternEnum.YYYY_MM_DD.getPattern());
+		String folder = appConfig.getProjectFolder() + Constants.FILE_FOLDER_FILE+month;
+		File folderFile = new File(folder);
+		if (!folderFile.exists()){
+			folderFile.mkdirs();
+        }
+		String filePath = folder + "/" + messageId;
+		String fileName = file.getOriginalFilename();
+		String fileSuffix = StringTools.getFileSuffix(fileName);
+		FileTypeEnum fileTypeEnum = FileTypeEnum.getBySuffix(fileSuffix);
+		if(FileTypeEnum.IMAGE == fileTypeEnum){
+			File tempFile= new File(appConfig.getProjectFolder()+Constants.FILE_FOLDER_TEMP +StringTools.getRandomString(Constants.LENGTH_30));
+			file.transferTo(tempFile);
+			filePath = filePath + Constants.IMAGE_SUFFIX;
+			filePath = fFmmpegUtils.transferImageType(tempFile,filePath);
+			fFmmpegUtils.createImageThumbnail(filePath);
+		}else if (fileTypeEnum == FileTypeEnum.VIDEO){
+			File tempFile= new File(appConfig.getProjectFolder()+Constants.FILE_FOLDER_TEMP +StringTools.getRandomString(Constants.LENGTH_30));
+			file.transferTo(tempFile);
+			fFmmpegUtils.transferVideoType(tempFile,filePath,fileSuffix);
+			fFmmpegUtils.createImageThumbnail(filePath);
+		}else {
+			filePath = filePath+fileSuffix;
+			file.transferTo(new File(filePath));
+		}
+		String tableName = TableSplitUtils.getMeetingChatMessageTable(currentMeetingId);
+		MeetingChatMessage chatMessage = new MeetingChatMessage();
+		chatMessage.setStatus(MessageStatusEnum.SENDED.getStatus());
+		meetingChatMessageMapper.updateByMessageId(tableName,chatMessage, messageId);
+		MessageSendDto messageSendDto = new MessageSendDto();
+		messageSendDto.setMeetingId(currentMeetingId);
+		messageSendDto.setMessageType(MessageTypeEnum.CHAT_MEDIA_MESSAGE_UPDATE.getType());
+		messageSendDto.setMessageId(messageId);
+		messageSendDto.setMessageSend2Type(MessageSend2TypeEnum.GROUP.getType());
+		messageHandler.sendMessage(messageSendDto);
+
+
 	}
 }

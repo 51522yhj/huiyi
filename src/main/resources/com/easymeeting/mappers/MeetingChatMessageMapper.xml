@@ -113,6 +113,12 @@
 			<if test="query.fileSuffixFuzzy!= null  and query.fileSuffixFuzzy!=''">
 				 and  m.file_suffix like concat('%', #{query.fileSuffixFuzzy}, '%')
 			</if>
+		 <if test="query.userId!= null  and query.userId!=''">
+			 and  (m.receive_user_id = #{query.userId} and m.receive_type = 1 or m.receive_type=0)
+		 </if>
+		 <if test="query.maxMessageId!= null  and query.maxMessageId!=''">
+			<![CDATA[ and  m.message_id < #{query.maxMessageId}]]>
+		 </if>
 	 </where>
 	</sql>
 

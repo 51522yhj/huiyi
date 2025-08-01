@@ -69,4 +69,11 @@ public class StringTools {
     public static final String getMeetingNoOrMeetingId(){
         return StringTools.getRandomNumber(Constants.LENGTH_10);
     }
+
+    public static String getFileSuffix(String fileName) {
+        if (StringTools.isEmpty(fileName)) {
+            return null;
+        }
+        return fileName.substring(fileName.lastIndexOf(".") + 1);
+    }
 }

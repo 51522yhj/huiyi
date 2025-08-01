@@ -1,10 +1,14 @@
 package com.easymeeting.service;
 
+import java.io.IOException;
 import java.util.List;
 
 import com.easymeeting.entity.query.MeetingChatMessageQuery;
 import com.easymeeting.entity.po.MeetingChatMessage;
 import com.easymeeting.entity.vo.PaginationResultVO;
+import org.springframework.web.multipart.MultipartFile;
+
+import javax.validation.constraints.NotNull;
 
 
 /**
@@ -69,4 +73,7 @@ public interface MeetingChatMessageService {
 	 */
 	Integer deleteMeetingChatMessageByMessageId(String tableName,Long messageId);
 
+	void saveChatMessage(MeetingChatMessage chatMessage);
+
+	void uploadFile(@NotNull MultipartFile file, String currentMeetingId, @NotNull Long messageId, @NotNull Long sendTime) throws IOException;
 }
