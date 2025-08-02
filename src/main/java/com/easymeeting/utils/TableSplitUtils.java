@@ -12,10 +12,10 @@ public class TableSplitUtils {
     public static String getTableName(String prefix,Integer tableCount,String key) {
     int hashCode = Math.abs(murmurHash(key));
     int tableNum = hashCode % tableCount + 1;
-    int tableNumLength =String.valueOf(tableNum).length();
-    if(tableNumLength <2){
-        return prefix + "_0" + tableNum;
-    }
+    int tableNumLength =String.valueOf(tableCount).length();
+//    if(tableNumLength <2){
+//        return prefix + "_0" + tableNum;
+//    }
     return prefix + "_" + String.format("%0" + tableNumLength + "d", tableNum);
     }
     public static String getMeetingChatMessageTable(String meetingId){
