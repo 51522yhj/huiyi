@@ -40,7 +40,8 @@ public class MeetingChatMessageServiceImpl implements MeetingChatMessageService 
 	private MessageHandler messageHandler;
     @Autowired
     private AppConfig appConfig;
-
+@Resource
+private  FFmpegUtils fFmmpegUtils;
 	/**
 	 * 根据条件查询列表
 	 */
@@ -151,7 +152,7 @@ public class MeetingChatMessageServiceImpl implements MeetingChatMessageService 
 			throw new BusinessException(ResponseCodeEnum.CODE_600);
 		}
 		MessageTypeEnum messageTypeEnum = MessageTypeEnum.getByType(chatMessage.getMessageType());
-		if(messageTypeEnum == MessageTypeEnum.CHAT_MEDIA_MESSAGE){
+		if(messageTypeEnum == MessageTypeEnum.CHAT_TEXT_MESSAGE){
 			if (StringTools.isEmpty(chatMessage.getMessageContent())){
 				throw new BusinessException(ResponseCodeEnum.CODE_600);
 			}
@@ -196,15 +197,20 @@ public class MeetingChatMessageServiceImpl implements MeetingChatMessageService 
 		FileTypeEnum fileTypeEnum = FileTypeEnum.getBySuffix(fileSuffix);
 		if(FileTypeEnum.IMAGE == fileTypeEnum){
 			File tempFile= new File(appConfig.getProjectFolder()+Constants.FILE_FOLDER_TEMP +StringTools.getRandomString(Constants.LENGTH_30));
+			if (!tempFile.exists()){
+				tempFile.mkdirs();
+			}
 			file.transferTo(tempFile);
+
 			filePath = filePath + Constants.IMAGE_SUFFIX;
+			String fileMid = filePath;
 			filePath = fFmmpegUtils.transferImageType(tempFile,filePath);
-			fFmmpegUtils.createImageThumbnail(filePath);
+			fFmmpegUtils.createImageThumbnail(fileMid);
 		}else if (fileTypeEnum == FileTypeEnum.VIDEO){
-			File tempFile= new File(appConfig.getProjectFolder()+Constants.FILE_FOLDER_TEMP +StringTools.getRandomString(Constants.LENGTH_30));
+			File tempFile= new File(appConfig.getProjectFolder()+Constants.FILE_FOLDER_TEMP +StringTools.getRandomString(Constants.LENGTH_30)+FileTypeEnum.VIDEO.getSuffix());
 			file.transferTo(tempFile);
 			fFmmpegUtils.transferVideoType(tempFile,filePath,fileSuffix);
-			fFmmpegUtils.createImageThumbnail(filePath);
+			fFmmpegUtils.createImageThumbnail(filePath + FileTypeEnum.VIDEO.getSuffix());
 		}else {
 			filePath = filePath+fileSuffix;
 			file.transferTo(new File(filePath));

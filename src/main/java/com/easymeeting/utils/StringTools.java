@@ -74,10 +74,17 @@ public class StringTools {
         if (StringTools.isEmpty(fileName)) {
             return null;
         }
-        return fileName.substring(fileName.lastIndexOf(".") + 1);
+        return fileName.substring(fileName.lastIndexOf(".") );
     }
 
     public static String getImageThumbnail(String filePath) {
-        return filePath + Constants.IMAGE_THUMBNAIL_SUFFIX;
+        if (StringTools.isEmpty(filePath)) {
+            return null;
+        }
+        if (filePath.contains(".")){
+            String[] split = filePath.split("\\.");
+            return split[0] + Constants.IMAGE_THUMBNAIL_SUFFIX + Constants.IMAGE_SUFFIX;
+        }
+        return filePath + Constants.IMAGE_THUMBNAIL_SUFFIX + Constants.IMAGE_SUFFIX;
     }
 }

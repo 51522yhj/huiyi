@@ -178,9 +178,9 @@ public class UserInfoServiceImpl implements UserInfoService {
 		if (UserStatusEnum.DISABLE.getStatus().equals(userInfo.getStatus())) {
 			throw new BusinessException(ResponseCodeEnum.CODE_502);
 		}
-		if (userInfo.getLastLoginTime()!= null && userInfo.getLastLoginTime() > userInfo.getLastOffTime()) {
-			throw new BusinessException(ResponseCodeEnum.CODE_503);
-		}
+//		if (userInfo.getLastLoginTime()!= null && userInfo.getLastLoginTime() > userInfo.getLastOffTime()) {
+//			throw new BusinessException(ResponseCodeEnum.CODE_503);
+//		}
 		TokenUserInfoDto tokenUserInfoDto = CopyTools.copy(userInfo, TokenUserInfoDto.class);
 		String token =  StringTools.encodeByMD5(tokenUserInfoDto.getUserId() + StringTools.getRandomNumber(Constants.LENGTH_20));
 		tokenUserInfoDto.setToken(token);

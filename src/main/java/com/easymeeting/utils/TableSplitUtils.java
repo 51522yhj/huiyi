@@ -6,13 +6,16 @@ public class TableSplitUtils {
     private static final Integer SPLIT_TABLE_COUNT = 32;
     public static String getCreateTableSql(String templateTableName,Integer tableIndex,Integer tableCount) {
         Integer padLen = String.valueOf(tableCount).length();
-        String tableName =templateTableName +"_"+ String.format("%s_%0" + padLen + "d", templateTableName, tableIndex);
+        String tableName =String.format("%s_%0" + padLen + "d", templateTableName, tableIndex);
         return String.format(CREATE_TABLE_TEMP, tableName, templateTableName);
     }
     public static String getTableName(String prefix,Integer tableCount,String key) {
     int hashCode = Math.abs(murmurHash(key));
     int tableNum = hashCode % tableCount + 1;
     int tableNumLength =String.valueOf(tableNum).length();
+    if(tableNumLength <2){
+        return prefix + "_0" + tableNum;
+    }
     return prefix + "_" + String.format("%0" + tableNumLength + "d", tableNum);
     }
     public static String getMeetingChatMessageTable(String meetingId){
@@ -25,7 +28,8 @@ public class TableSplitUtils {
     }
 
     public static void main(String[] args) {
-        getSplitTableSQL();
+      //  getSplitTableSQL();
+        System.out.println(getMeetingChatMessageTable("9302957948"));
     }
     private static int murmurHash(String key) {
         final byte[] data = key.getBytes();

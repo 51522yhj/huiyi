@@ -98,7 +98,7 @@ public class ChannelContextUtils {
         if (channel == null) {
             return;
         }
-        channel.writeAndFlush(new TextWebSocketFrame(JSON.toJSONString(messageSendDto)));
+        channel.writeAndFlush(new TextWebSocketFrame(JsonUtils.convertObj2JsonWithLongToString(messageSendDto)));
     }
     private void sendMsg2Group(MessageSendDto messageSendDto){
         if (messageSendDto.getMeetingId() == null) {
@@ -126,7 +126,8 @@ public class ChannelContextUtils {
             }
             removeContextGroup(messageSendDto.getMeetingId());
         }
-        channelGroup.writeAndFlush(new TextWebSocketFrame(JSON.toJSONString(messageSendDto)));
+        log.info(new TextWebSocketFrame(JsonUtils.convertObj2JsonWithLongToString(messageSendDto)).text());
+        channelGroup.writeAndFlush(new TextWebSocketFrame(JsonUtils.convertObj2JsonWithLongToString(messageSendDto)));
     }
 
     private void removeContextGroup(String meetingId) {

@@ -5,6 +5,7 @@ import com.easymeeting.entity.dto.MeetingMemberDto;
 import com.easymeeting.entity.dto.TokenUserInfoDto;
 import com.easymeeting.entity.enums.MeetingMemberStatusEnum;
 import com.easymeeting.utils.JsonUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
@@ -15,6 +16,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Component
+@Slf4j
 public class RedisComponent {
     @Resource
     private RedisUtils redisUtils;
@@ -34,13 +36,14 @@ public class RedisComponent {
 
     public void saveTokenUserInfoDto(TokenUserInfoDto tokenUserInfoDto) {
         redisUtils.setex(Constants.REDIS_KEY_WS_TOKEN + tokenUserInfoDto.getToken(), tokenUserInfoDto, Constants.REDIS_KEY_EXPIRES_ONE_DAY);
-        redisUtils.setex(Constants.REDIS_KEY_WS_TOEKN_USERID+ tokenUserInfoDto.getUserId(), tokenUserInfoDto.getToken(), Constants.REDIS_KEY_EXPIRES_ONE_DAY);
+        redisUtils.setex(Constants.REDIS_KEY_WS_TOEKN_USERID+ tokenUserInfoDto.getUserId(), tokenUserInfoDto, Constants.REDIS_KEY_EXPIRES_ONE_DAY);
     }
     public TokenUserInfoDto checkToken(String token) {
         return (TokenUserInfoDto) redisUtils.get(Constants.REDIS_KEY_WS_TOKEN + token);
     }
     public TokenUserInfoDto getTokenUserInfoDtoByUserId(String userId) {
-        return JsonUtils.convertJson2Obj((String) redisUtils.get(Constants.REDIS_KEY_WS_TOEKN_USERID + userId), TokenUserInfoDto.class);
+        TokenUserInfoDto tokenUserInfoDto = (TokenUserInfoDto) redisUtils.get(Constants.REDIS_KEY_WS_TOEKN_USERID + userId);
+        return (TokenUserInfoDto) redisUtils.get(Constants.REDIS_KEY_WS_TOEKN_USERID + userId);
        // return (TokenUserInfoDto) redisUtils.get(Constants.REDIS_KEY_WS_TOEKN_USERID + userId);
     }
 

@@ -2,8 +2,10 @@ package com.easymeeting.entity.dto;
 
 import lombok.Data;
 
+import java.io.Serializable;
+
 @Data
-public class MeetingMemberDto {
+public class MeetingMemberDto implements Serializable {
 private String userId;
 private String nickName;
 private Long joinTime;
